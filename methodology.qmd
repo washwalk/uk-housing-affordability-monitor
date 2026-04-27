@@ -1,0 +1,52 @@
+---
+title: "Methodology"
+---
+
+## Indicator
+
+The headline measure is:
+
+```text
+median house price / median gross annual resident earnings
+```
+
+The monitor uses local authority records where both house price and earnings values are available for the same year and geography code.
+
+## Data Sources
+
+The Python pipeline queries the ONS API for the latest published versions of:
+
+- `house-prices-local-authority`: House price statistics for small areas in England and Wales
+- `ashe-tables-7-and-8`: Earnings and hours worked, place of work and residence by local authority
+
+The script then streams the ONS CSV downloads advertised by the API version metadata.
+
+## Filters
+
+House price data are filtered to:
+
+- median price
+- all property types
+- all build statuses
+- September year-ending period
+
+Earnings data are filtered to:
+
+- gross annual pay
+- median
+- all employees
+- all working patterns
+- residence-based geography
+
+## Reproducibility
+
+The workflow is designed as a statistical publication pipeline:
+
+- ONS API metadata determines current data versions
+- Python processes and writes tidy CSV outputs
+- Quarto renders the public website
+- GitHub Actions refreshes the data and deploys to GitHub Pages
+
+## Limitations
+
+The monitor currently focuses on England and Wales because the ONS house price small-area dataset used here covers England and Wales. The ratio is a concise monitoring indicator, not a lending affordability model.

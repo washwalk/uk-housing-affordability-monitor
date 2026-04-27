@@ -1,0 +1,121 @@
+---
+title: "UK Housing Affordability Monitor"
+---
+
+```{python}
+import json
+from pathlib import Path
+
+import pandas as pd
+import plotly.express as px
+
+metadata = json.loads(Path("data/metadata.json").read_text())
+trend = pd.read_csv("data/affordability_trend.csv")
+latest = pd.read_csv("data/affordability_by_area.csv")
+latest = latest[(latest["year"] == metadata["latest_year"]) & (latest["area_type"] == "local_authority")]
+least = pd.read_csv("data/least_affordable_latest.csv")
+most = pd.read_csv("data/most_affordable_latest.csv")
+```
+
+::: {.hero}
+# Housing affordability, automated from official statistics
+
+This monitor combines ONS house price statistics and ASHE earnings data to track how many years of median gross annual pay are implied by the median local house price in England and Wales.
+:::
+
+::: {.stat-grid}
+```{python}
+#| output: asis
+print(f"""
+<div class="stat-card">
+  <div class="label">Latest year</div>
+  <div class="value">{metadata['latest_year']}</div>
+  <div class="small">September year-ending house price period aligned to annual earnings.</div>
+</div>
+<div class="stat-card">
+  <div class="label">Median ratio</div>
+  <div class="value">{metadata['median_ratio_latest']}x</div>
+  <div class="small">Median local authority house-price-to-earnings ratio.</div>
+</div>
+<div class="stat-card">
+  <div class="label">Least affordable</div>
+  <div class="value">{metadata['least_affordable_area']['affordability_ratio']}x</div>
+  <div class="small">{metadata['least_affordable_area']['area_name']}</div>
+</div>
+<div class="stat-card">
+  <div class="label">Areas monitored</div>
+  <div class="value">{metadata['area_count_latest']}</div>
+  <div class="small">Local authorities with matched ONS house price and earnings data.</div>
+</div>
+""")
+```
+:::
+
+```{python}
+fig = px.line(
+    trend,
+    x="year",
+    y="affordability_ratio",
+    markers=True,
+    title="Median local affordability ratio over time",
+    labels={"year": "Year", "affordability_ratio": "Median house price / median annual pay"},
+)
+fig.update_traces(line_color="#123c69", marker_color="#f3b700", line_width=3)
+fig.update_layout(height=430, margin=dict(l=20, r=20, t=60, b=20))
+fig.show()
+```
+
+```{python}
+plot_latest = latest.sort_values("affordability_ratio", ascending=False).head(25)
+fig = px.bar(
+    plot_latest.sort_values("affordability_ratio"),
+    x="affordability_ratio",
+    y="area_name",
+    orientation="h",
+    title=f"Highest affordability ratios, {metadata['latest_year']}",
+    labels={"affordability_ratio": "Ratio", "area_name": "Local authority"},
+    color="affordability_ratio",
+    color_continuous_scale="Blues",
+)
+fig.update_layout(height=720, margin=dict(l=20, r=20, t=60, b=20), coloraxis_showscale=False)
+fig.show()
+```
+
+## Interpretation
+
+The indicator is deliberately simple: a value of `8.0` means the median house price is eight times median gross annual resident earnings in that local authority. This makes local differences easy to explain while keeping the data pipeline reproducible and auditable.
+
+::: {.note}
+This is not a full mortgage affordability model. It does not include deposits, interest rates, household composition, wealth, taxes, benefits, or housing quality. It is a clear headline indicator for monitoring spatial and temporal affordability pressure.
+:::
+
+## Most affordable areas
+
+```{python}
+most[["area_name", "median_house_price", "median_annual_pay", "affordability_ratio"]].rename(
+    columns={
+        "area_name": "Area",
+        "median_house_price": "Median house price",
+        "median_annual_pay": "Median annual pay",
+        "affordability_ratio": "Ratio",
+    }
+).head(10)
+```
+
+## Least affordable areas
+
+```{python}
+least[["area_name", "median_house_price", "median_annual_pay", "affordability_ratio"]].rename(
+    columns={
+        "area_name": "Area",
+        "median_house_price": "Median house price",
+        "median_annual_pay": "Median annual pay",
+        "affordability_ratio": "Ratio",
+    }
+).head(10)
+```
+
+```{python}
+#| output: asis
+print(f"<p class='small'>Last data refresh: {metadata['generated_at']}</p>")
+```
